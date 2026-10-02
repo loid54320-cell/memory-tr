@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>記憶トレーナー</title>
+<style>
+:root{
+  --bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#667085;
+  --line:#dbe2ea;--accent:#315efb;--accent2:#1739a6;--good:#15803d;
+  --bad:#b42318;--shadow:0 10px 30px rgba(15,23,42,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif}
+button,input,textarea{font:inherit}
+button{border:0;border-radius:14px;padding:13px 16px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer}
+button.secondary{background:#eef2f7;color:var(--text)}
+button.ghost{background:transparent;color:var(--accent)}
+button.danger{background:#fff0f0;color:var(--bad)}
+button:disabled{opacity:.45;cursor:default}
+.app{max-width:900px;margin:0 auto;padding:20px 14px 40px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+h1{font-size:26px;margin:0}
+.small{font-size:12px;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:18px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(min-width:700px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.mode{padding:18px;text-align:left;min-height:120px;background:#fff;color:var(--text);border:1px solid var(--line)}
+.mode strong{display:block;font-size:18px;margin-bottom:8px}
+.mode span{font-size:13px;color:var(--muted);font-weight:500}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.center{text-align:center}
+.big{font-size:54px;letter-spacing:.1em;font-weight:800}
+.progress{height:10px;background:#eef2f7;border-radius:99px;overflow:hidden}
+.progress>div{height:100%;background:var(--accent);width:0}
+.notice{padding:12px 14px;border-radius:14px;background:#eef4ff;color:#243b82;font-size:14px}
+.result.good{color:var(--good)} .result.bad{color:var(--bad)}
+.options{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.options button{background:#eef2f7;color:var(--text)}
+textarea,input{width:100%;border:1px solid var(--line);border-radius:14px;padding:12px;background:#fff;color:var(--text)}
+textarea{min-height:130px;resize:vertical}
+.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:#f8fafc;border:1px solid var(--line);border-radius:16px;padding:12px}
+.stat b{font-size:24px;display:block;margin-top:4px}
+.list{display:grid;gap:8px}
+.review{border:1px solid var(--line);border-radius:14px;padding:12px}
+.review .meta{font-size:12px;color:var(--muted);margin-bottom:5px}
+.hidden{display:none!important}
+hr{border:0;border-top:1px solid var(--line);margin:16px 0}
+</style>
+
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="theme-color" content="#111827">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="記憶トレーナー">
+
+</head>
+<body>
+<div class="app">
+<header>
+  <div>
+    <h1>記憶トレーナー</h1>
+    <div class="small">短期記憶・ワーキングメモリ・遅延再生を練習</div>
+  </div>
+  <button class="secondary" id="homeBtn">ホーム</button>
+</header>
+
+<section id="home">
+  <div class="card">
+    <div class="notice">1日10〜15分を目安に。成績はこのiPhoneのブラウザ内だけに保存されます。</div>
+  </div>
+
+  <div class="card">
+    <h2>トレーニング</h2>
+    <div class="grid">
+      <button class="mode" data-mode="forward"><strong>数字・順唱</strong><span>見た数字を同じ順番で入力</span></button>
+      <button class="mode" data-mode="reverse"><strong>数字・逆唱</strong><span>見た数字を逆順で入力</span></button>
+      <button class="mode" data-mode="visual"><strong>視空間・順序</strong><span>光ったマスを順番どおりタップ</span></button>
+      <button class="mode" data-mode="words"><strong>遅延・単語</strong><span>覚えてから計算を挟んで再生</span></button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>読書記憶</h2>
+    <p class="small">読んだ本の内容を、時間を空けて自力で取り出す練習。</p>
+    <button id="readingBtn">読書記憶を始める</button>
+  </div>
+
+  <div class="card">
+    <h2>記録</h2>
+    <div class="statgrid">
+      <div class="stat"><span class="small">今日のセッション</span><b id="todaySessions">0</b></div>
+      <div class="stat"><span class="small">総セッション</span><b id="totalSessions">0</b></div>
+      <div class="stat"><span class="small">平均正答率</span><b id="avgAccuracy">0%</b></div>
+    </div>
+    <hr>
+    <div id="dueReviews" class="list"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="danger" id="resetBtn">記録を消去</button>
+    </div>
+  </div>
+</section>
+
+<section id="game" class="hidden">
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div><b id="gameTitle">トレーニング</b><div class="small" id="gameSubtitle"></div></div>
+      <div class="small">レベル <span id="level">1</span></div>
+    </div>
+    <div class="progress" style="margin-top:12px"><div id="bar"></div></div>
+    <div id="gameBody" style="margin-top:18px"></div>
+  </div>
+</section>
+
+<section id="reading" class="hidden">
+  <div class="card">
+    <h2>読書記憶</h2>
+    <div id="readingSetup">
+      <p class="small">本を数ページ読んだ後、この画面で「3つの要点」を自力で思い出して入力します。</p>
+      <label class="small">本のタイトル（任意）</label>
+      <input id="bookTitle" placeholder="例：認知心理学入門">
+      <div style="height:8px"></div>
+      <label class="small">読んだ範囲（任意）</label>
+      <input id="bookRange" placeholder="例：第3章 p.72–85">
+      <div style="height:8px"></div>
+      <label class="small">自分で思い出すための質問</label>
+      <textarea id="readingQuestions" placeholder="例：著者の主張は何だった？ それを支える理由は？"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button id="startRecall">今すぐ想起テスト</button>
+        <button class="secondary" id="backReading">戻る</button>
+      </div>
+    </div>
+
+    <div id="readingRecall" class="hidden">
+      <div class="notice">本を閉じて、できるだけ見ずに答えてみよう。</div>
+      <p><b id="rqDisplay"></b></p>
+      <textarea id="readingAnswer" placeholder="思い出せることを自由に書く"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button id="saveRecall">保存して復習を予約</button>
+        <button class="secondary" id="cancelRecall">キャンセル</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+const KEY="memoryTrainerV1";
+const $=id=>document.getElementById(id);
+let state=JSON.parse(localStorage.getItem(KEY)||'null')||{
+  sessions:[], levels:{forward:1,reverse:1,visual:1,words:1}, best:{}, reviews:[]
+};
+
+function save(){localStorage.setItem(KEY,JSON.stringify(state)); renderHome();}
+function today(){return new Date().toLocaleDateString('ja-JP');}
+function updateStats(){
+  const t=state.sessions.filter(s=>s.date===today()).length;
+  $("todaySessions").textContent=t;
+  $("totalSessions").textContent=state.sessions.length;
+  const acc=state.sessions.length?state.sessions.reduce((a,s)=>a+s.accuracy,0)/state.sessions.length:0;
+  $("avgAccuracy").textContent=Math.round(acc)+"%";
+}
+function renderHome(){
+  updateStats();
+  const now=Date.now();
+  const due=state.reviews.filter(r=>r.due<=now);
+  $("dueReviews").innerHTML=due.length
+    ? '<b>復習タイミングです</b>'+due.map(r=>`<div class="review"><div class="meta">${esc(r.title||"読書メモ")} ・ ${new Date(r.due).toLocaleString('ja-JP')}</div><div>${esc(r.question)}</div><button style="margin-top:8px" onclick="openReview('${r.id}')">想起する</button></div>`).join('')
+    : '<div class="small">今すぐ復習する項目はありません。</div>';
+}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+
+function show(sec){["home","game","reading"].forEach(x=>$(x).classList.toggle("hidden",x!==sec));}
+$("homeBtn").onclick=()=>{show("home");renderHome();};
+$("readingBtn").onclick=()=>show("reading");
+$("backReading").onclick=()=>show("home");
+
+let game={};
+function randDigit(){return Math.floor(Math.random()*10);}
+function seq(n){let a=[];for(let i=0;i<n;i++)a.push(randDigit());return a;}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+document.querySelectorAll(".mode").forEach(b=>b.onclick=()=>startGame(b.dataset.mode));
+
+async function startGame(mode){
+  game={mode, level:Math.max(1,state.levels[mode]||1), round:0, total:5, correct:0};
+  show("game");
+  $("gameTitle").textContent={forward:"数字・順唱",reverse:"数字・逆唱",visual:"視空間・順序",words:"遅延・単語"}[mode];
+  $("gameSubtitle").textContent="5ラウンド";
+  await nextRound();
+}
+async function nextRound(){
+  if(game.round>=game.total){finishGame();return}
+  game.round++;
+  $("level").textContent=game.level;
+  $("bar").style.width=((game.round-1)/game.total*100)+"%";
+  if(game.mode==="visual"){visualRound();return;}
+  $("gameBody").innerHTML='<div class="center"><div class="small">覚えてください</div><div class="big" id="stim"></div></div>';
+  const len=Math.min(12,3+game.level-1);
+  let items=game.mode==="words"?["時計","雲","橋","猫","鉛筆","海","星","庭","電車","帽子","森","川"].sort(()=>Math.random()-.5).slice(0,Math.min(3+game.level-1,8)):seq(len);
+  game.items=items;
+  $("stim").textContent=items.join(game.mode==="words"?"　":" ");
+  await sleep(game.mode==="words"?2400+game.level*250:1300+game.level*220);
+  if(game.mode==="words"){
+    $("gameBody").innerHTML=`<div class="center"><div class="small">覚えた後に、計算をしてください</div><div class="big" id="math"></div><button id="showRecall" style="margin-top:14px">計算したので進む</button></div>`;
+    $("math").textContent=(17+game.level)+" + "+(8+game.level)+" = ?";
+    $("showRecall").onclick=()=>{showRecallWords();};
+  } else {
+    $("gameBody").innerHTML=`
+      <div class="center"><div class="small">入力してください</div><input id="ans" inputmode="numeric" autocomplete="off" placeholder="数字を入力（空白・カンマ可）">
+      <button id="submitAns" style="margin-top:12px">答え合わせ</button></div>`;
+    $("ans").focus(); $("submitAns").onclick=submitNumeric;
+  }
+}
+function submitNumeric(){
+  const raw=$("ans").value.replace(/[^0-9]/g,'');
+  const expected=(game.mode==="reverse"?game.items.slice().reverse():game.items).join('');
+  const ok=raw===expected;
+  if(ok) game.correct++;
+  showRoundResult(ok,expected);
+}
+function showRecallWords(){
+  $("gameBody").innerHTML=`<div class="center"><div class="small">覚えた単語を入力してください</div><input id="ans" placeholder="例：時計、猫、海">
+  <button id="submitWords" style="margin-top:12px">答え合わせ</button></div>`;
+  $("submitWords").onclick=()=>{
+    const typed=$("ans").value.split(/[、,\s]+/).map(x=>x.trim()).filter(Boolean);
+    const set=new Set(game.items); let hit=0; typed.forEach(x=>{if(set.has(x))hit++;});
+    const score=hit/game.items.length; if(score>=0.6)game.correct++;
+    showRoundResult(score>=0.6,`正解単語 ${hit}/${game.items.length}`);
+  };
+}
+function showRoundResult(ok,detail){
+  $("gameBody").innerHTML=`<div class="center"><div class="result ${ok?"good":"bad"}"><b>${ok?"正解":"もう一歩"}</b></div><p class="small">${esc(detail)}</p><button id="nextBtn">次のラウンド</button></div>`;
+  $("nextBtn").onclick=nextRound;
+}
+function visualRound(){
+  const size=3+Math.min(2,Math.floor((game.level-1)/3));
+  const count=Math.min(size*size-1,2+game.level);
+  $("gameBody").innerHTML=`<div class="center"><div class="small">光った順に覚えてください</div>
+    <div id="board" style="display:grid;grid-template-columns:repeat(${size},1fr);gap:8px;max-width:360px;margin:14px auto"></div></div>`;
+  const board=$("board"); let cells=[];
+  for(let i=0;i<size*size;i++){let d=document.createElement("button");d.className="secondary";d.textContent="";d.style.aspectRatio="1";d.style.padding="0";cells.push(d);board.appendChild(d);}
+  const order=[]; while(order.length<count){const x=Math.floor(Math.random()*cells.length);if(!order.includes(x))order.push(x);}
+  let i=0;
+  (async()=>{for(const idx of order){cells[idx].style.background="#315efb";await sleep(450);cells[idx].style.background="#eef2f7";await sleep(160)} enableVisual(order);})();
+}
+function enableVisual(order){
+  let pos=0; document.querySelectorAll("#board button").forEach((d,idx)=>d.onclick=()=>{
+    if(idx===order[pos]){d.style.background="#b9f6d0";pos++; if(pos===order.length){game.correct++;setTimeout(()=>showRoundResult(true,"順番どおり再現できました"),250);}}
+    else {showRoundResult(false,"順番が違いました");}
+  });
+}
+function finishGame(){
+  const accuracy=Math.round(game.correct/game.total*100);
+  const old=state.levels[game.mode]||1;
+  if(accuracy>=80) state.levels[game.mode]=Math.min(12,old+1);
+  else if(accuracy<40) state.levels[game.mode]=Math.max(1,old-1);
+  state.sessions.push({date:today(),mode:game.mode,accuracy,level:old,ts:Date.now()});
+  save();
+  $("bar").style.width="100%";
+  $("gameBody").innerHTML=`<div class="center"><h2>終了</h2><div class="big">${accuracy}%</div><p>5ラウンド中 ${game.correct} 問正解</p><p class="small">次回レベル：${state.levels[game.mode]}</p><button id="homeAfter">ホームへ</button></div>`;
+  $("homeAfter").onclick=()=>show("home");
+}
+
+$("startRecall").onclick=()=>{
+  const q=$("readingQuestions").value.trim()||"今読んだ本の内容で、覚えている重要な点を3つ書いてください。";
+  game.readingQ=q;
+  $("rqDisplay").textContent=q;
+  $("readingSetup").classList.add("hidden"); $("readingRecall").classList.remove("hidden");
+};
+$("cancelRecall").onclick=()=>{
+  $("readingRecall").classList.add("hidden"); $("readingSetup").classList.remove("hidden");
+};
+$("saveRecall").onclick=()=>{
+  const answer=$("readingAnswer").value.trim();
+  if(!answer){alert("何か思い出してから保存してね。");return;}
+  const now=Date.now();
+  const title=$("bookTitle").value.trim()||"読書メモ";
+  state.reviews.push({id:crypto.randomUUID(),title,range:$("bookRange").value.trim(),question:game.readingQ,answer,created:now,due:now+3600000,stage:"1時間後"});
+  state.reviews.push({id:crypto.randomUUID(),title,range:$("bookRange").value.trim(),question:game.readingQ,answer,due:now+24*3600000,stage:"翌日"});
+  state.sessions.push({date:today(),mode:"reading",accuracy:100,level:1,ts:now});
+  save();
+  alert("1時間後と翌日の復習を登録したよ。アプリを開いたときに復習できます。");
+  $("readingAnswer").value=""; show("home");
+};
+window.openReview=function(id){
+  const r=state.reviews.find(x=>x.id===id); if(!r)return;
+  show("reading");
+  $("readingSetup").classList.add("hidden"); $("readingRecall").classList.remove("hidden");
+  $("rqDisplay").textContent=r.question;
+  $("readingAnswer").value="";
+  $("saveRecall").onclick=()=>{
+    const a=$("readingAnswer").value.trim(); if(!a){alert("まず思い出して書いてみてね。");return;}
+    r.due=Date.now()+24*3600000; r.stage="次回"; r.answer=a; save(); alert("復習結果を保存したよ。"); show("home");
+  };
+};
+
+$("resetBtn").onclick=()=>{
+  if(confirm("記録をすべて消去します。よろしいですか？")){
+    localStorage.removeItem(KEY); state={sessions:[],levels:{forward:1,reverse:1,visual:1,words:1},best:{},reviews:[]}; renderHome();
+  }
+};
+renderHome();
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  });
+}
+</script>
+
+</body>
+</html>
